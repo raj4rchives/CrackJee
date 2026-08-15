@@ -15,7 +15,23 @@ $("#backlogForm").onsubmit=e=>{e.preventDefault();data.backlogs.push({text:$("#b
 $("#questionForm").onsubmit=e=>{e.preventDefault();data.questions[$("#qType").value]+= +$("#qNumber").value;e.target.reset();save()};
 $("#mockForm").onsubmit=e=>{e.preventDefault();data.mocks.unshift({name:$("#mockName").value,score:+$("#mockScore").value,max:+$("#mockMax").value,percentile:$("#mockPercentile").value});e.target.reset();$("#mockMax").value=300;save()};
 $("#revisionForm").onsubmit=e=>{e.preventDefault();data.revisions.push({text:$("#revisionTopic").value,date:$("#revisionDate").value,done:false});e.target.reset();$("#revisionDate").value=today;save()};
+function updateDate() {
+    const now = new Date();
 
+    const day = now.toLocaleDateString("en-IN", {
+        weekday: "long"
+    }).toUpperCase();
+
+    const date = now.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "long"
+    }).toUpperCase();
+
+    document.getElementById("currentDate").textContent =
+        `${day} · ${date}`;
+}
+
+updateDate();
 function toggle(arr,i){arr[i].done=!arr[i].done;save()}
 function del(arr,i){arr.splice(i,1);save()}
 function renderTodos(){let el=$("#todoList");el.innerHTML=data.todos.length?data.todos.map((t,i)=>`<div class="todo-row ${t.done?"done":""}"><div class="row-left"><input type="checkbox" ${t.done?"checked":""} onchange="toggle(data.todos,${i})"><span>${esc(t.text)}</span><span class="tag">${t.subject}</span></div><button class="ghost" onclick="del(data.todos,${i})">×</button></div>`).join(""):`<p class="muted">No tasks yet. Add your first task above.</p>`}
