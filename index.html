@@ -142,6 +142,9 @@
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
+    // GROQ API KEY PASTE HERE (gsk_...):
+    const GROQ_API_KEY = "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";
+
     let selectedType = 'short_notes';
     let pdfTextData = "";
 
@@ -193,37 +196,46 @@
     }
 
     async function generateNotes() {
+      if (GROQ_API_KEY.includes("PASTE_YOUR")) {
+        alert("Pehle console.groq.com se free key banakar line 197 me paste karein!");
+        return;
+      }
+
       const btn = document.getElementById('genBtn');
       btn.innerText = "Generating AI Notes... ⏳";
       btn.disabled = true;
 
-      const promptText = `Generate study notes in pure HTML format (do not use markdown formatting like \`\`\`html). 
-Structure:
+      const promptText = `Generate study notes from this text. Output ONLY raw HTML tags (no markdown formatting or backticks).
+Requirements:
 - Use <h2> for Title
 - Use <p> and <b> for key points
 - Use <div class='formula-box'> for important formulas or takeaways
 
-Content to summarize:
+Source Text:
 ${pdfTextData.substring(0, 3000)}`;
 
       try {
-        const response = await fetch("https://text.pollinations.ai/", {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Authorization": `Bearer ${GROQ_API_KEY.trim()}`,
+            "Content-Type": "application/json"
+          },
           body: JSON.stringify({
-            messages: [
-              { role: "system", content: "You are an AI study assistant that outputs pure clean HTML elements." },
-              { role: "user", content: promptText }
-            ],
-            model: "openai"
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "user", content: promptText }]
           })
         });
 
-        let resultText = await response.text();
-        resultText = resultText.replace(/```html|```/g, '').trim();
+        const data = await response.json();
 
-        document.getElementById('pdfContent').innerHTML = resultText;
-        document.getElementById('previewContainer').style.display = 'block';
+        if (data.choices && data.choices[0].message.content) {
+          let resultText = data.choices[0].message.content.replace(/```html|```/g, '').trim();
+          document.getElementById('pdfContent').innerHTML = resultText;
+          document.getElementById('previewContainer').style.display = 'block';
+        } else {
+          alert("Groq Error: " + (data.error ? data.error.message : "Failed to generate"));
+        }
       } catch (e) {
         alert("Generation failed! Please check connection.");
       } finally {
