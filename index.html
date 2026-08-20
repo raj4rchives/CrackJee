@@ -128,7 +128,7 @@
           </div>
         </div>
 
-        <button class="btn-generate" id="genBtn" onclick="generateNotes()">Generate with Gemini AI →</button>
+        <button class="btn-generate" id="genBtn" onclick="generateNotes()">Generate with AI →</button>
       </div>
     </div>
 
@@ -141,9 +141,6 @@
 
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-
-    // AAPKI AQ. WALI REAL API KEY (Aapne screenshot me jo dikhai thi):
-    const GEMINI_API_KEY = "AQ.Ab8RN6L5inQ8hOYD7q9lR8VzxWwzpScCZhOYV_gCpvJaQbsEeg"; // Niche line 198 me apni poori key paste kar dena!
 
     let selectedType = 'short_notes';
     let pdfTextData = "";
@@ -170,7 +167,7 @@
             pdfTextData = fullText.trim();
             showStep2();
           } catch(err) {
-            alert("PDF file read karne me dikkat hui!");
+            alert("PDF read karne me issue aaya!");
           }
         };
         reader.readAsArrayBuffer(file);
@@ -200,43 +197,37 @@
       btn.innerText = "Generating AI Notes... ⏳";
       btn.disabled = true;
 
-      const promptText = `Output ONLY raw HTML tags (no \`\`\`html or markdown). 
-Use <h2> for main heading, <p><b> for key points, and <div class='formula-box'> for formulas.
+      const promptText = `Generate study notes in pure HTML format (do not use markdown formatting like \`\`\`html). 
+Structure:
+- Use <h2> for Title
+- Use <p> and <b> for key points
+- Use <div class='formula-box'> for important formulas or takeaways
 
 Content to summarize:
 ${pdfTextData.substring(0, 3000)}`;
 
-      // Direct Gemini REST Endpoint configured for AQ-type keys
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY.trim()}`;
-
       try {
-        const response = await fetch(apiUrl, {
+        const response = await fetch("https://text.pollinations.ai/", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [{
-              parts: [{ text: promptText }]
-            }]
+            messages: [
+              { role: "system", content: "You are an AI study assistant that outputs pure clean HTML elements." },
+              { role: "user", content: promptText }
+            ],
+            model: "openai"
           })
         });
 
-        const data = await response.json();
+        let resultText = await response.text();
+        resultText = resultText.replace(/```html|```/g, '').trim();
 
-        if (response.ok && data.candidates && data.candidates[0].content.parts[0].text) {
-          let aiOutput = data.candidates[0].content.parts[0].text.replace(/```html|```/g, '').trim();
-          document.getElementById('pdfContent').innerHTML = aiOutput;
-          document.getElementById('previewContainer').style.display = 'block';
-        } else {
-          // Exact error details print hone lagega
-          const errDetail = data.error ? data.error.message : "Invalid key or permission issue";
-          alert("Gemini Error: " + errDetail);
-        }
+        document.getElementById('pdfContent').innerHTML = resultText;
+        document.getElementById('previewContainer').style.display = 'block';
       } catch (e) {
-        alert("Network Connection Error! Check your internet or API Key.");
+        alert("Generation failed! Please check connection.");
       } finally {
-        btn.innerText = "Generate with Gemini AI →";
+        btn.innerText = "Generate with AI →";
         btn.disabled = false;
       }
     }
