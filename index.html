@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NoteNest AI</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<header><div class="logo">Note<span>Nest</span> <small>AI</small></div><button id="theme">☀</button></header>
+<main>
+<section class="hero"><div class="pill">✦ AI POWERED REVISION</div><h1>Turn any PDF into<br><b>smart study notes.</b></h1><p>Upload your notes, choose what you need, and let AI create a clean revision sheet.</p></section>
+<section class="panel">
+<div id="drop" class="drop"><div class="upload-icon">↑</div><h2>Upload PDF or Image</h2><p>Drag & drop or choose a file</p><input id="file" type="file" accept=".pdf,image/*"><label for="file" class="btn">Choose File</label><div id="filename"></div></div>
+<div class="options"><h3>What should AI create?</h3>
+<div class="types">
+<button class="type active" data-type="Short Notes"><b>📝</b><span>Short Notes<small>Concepts + key points</small></span></button>
+<button class="type" data-type="Formula Sheet"><b>∑</b><span>Formula Sheet<small>Important formulas only</small></span></button>
+<button class="type" data-type="Cheat Sheet"><b>⚡</b><span>Cheat Sheet<small>Ultra quick revision</small></span></button>
+<button class="type" data-type="One Page Revision"><b>📄</b><span>One Page Revision<small>Maximum information, minimum space</small></span></button>
+</div>
+<button id="generate" class="generate">Generate with AI →</button>
+</div>
+</section>
+<section id="result" class="result hidden"><div class="result-head"><div><span class="pill">AI GENERATED</span><h2>Your Revision Sheet</h2></div><button id="copy">Copy</button></div><article id="output"></article></section>
+</main>
+<footer>NoteNest AI • Built for faster revision</footer>
+<script src="script.js"></script>
+</body></html>
