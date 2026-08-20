@@ -1,26 +1,296 @@
-<!doctype html>
-<html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NoteNest AI</title>
-<link rel="stylesheet" href="style.css">
-</head><body>
-<header><div class="logo">Note<span>Nest</span> <small>AI</small></div><button id="theme">☀</button></header>
-<main>
-<section class="hero"><div class="pill">✦ AI POWERED REVISION</div><h1>Turn any PDF into<br><b>smart study notes.</b></h1><p>Upload your notes, choose what you need, and let AI create a clean revision sheet.</p></section>
-<section class="panel">
-<div id="drop" class="drop"><div class="upload-icon">↑</div><h2>Upload PDF or Image</h2><p>Drag & drop or choose a file</p><input id="file" type="file" accept=".pdf,image/*"><label for="file" class="btn">Choose File</label><div id="filename"></div></div>
-<div class="options"><h3>What should AI create?</h3>
-<div class="types">
-<button class="type active" data-type="Short Notes"><b>📝</b><span>Short Notes<small>Concepts + key points</small></span></button>
-<button class="type" data-type="Formula Sheet"><b>∑</b><span>Formula Sheet<small>Important formulas only</small></span></button>
-<button class="type" data-type="Cheat Sheet"><b>⚡</b><span>Cheat Sheet<small>Ultra quick revision</small></span></button>
-<button class="type" data-type="One Page Revision"><b>📄</b><span>One Page Revision<small>Maximum information, minimum space</small></span></button>
-</div>
-<button id="generate" class="generate">Generate with AI →</button>
-</div>
-</section>
-<section id="result" class="result hidden"><div class="result-head"><div><span class="pill">AI GENERATED</span><h2>Your Revision Sheet</h2></div><button id="copy">Copy</button></div><article id="output"></article></section>
-</main>
-<footer>NoteNest AI • Built for faster revision</footer>
-<script src="script.js"></script>
-</body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NoteNest AI - Smart Study Notes</title>
+  
+  <!-- Handwritten Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;600;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+  
+  <!-- html2pdf Library for PDF Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0d0f12;
+      --card-bg: #16191e;
+      --accent-yellow: #facc15;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border-color: #27272a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    header {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 0;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo span {
+      background-color: var(--accent-yellow);
+      color: #000;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    h1 span {
+      color: var(--accent-yellow);
+    }
+
+    p.subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      background: #111317;
+      margin-bottom: 20px;
+    }
+
+    .upload-zone:hover {
+      border-color: var(--accent-yellow);
+    }
+
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .option-card {
+      background: #1f232b;
+      border: 1px solid var(--border-color);
+      padding: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.2s;
+    }
+
+    .option-card.selected {
+      border-color: var(--accent-yellow);
+      background-color: #262b35;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background-color: var(--accent-yellow);
+      color: #000;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Handwritten Result Sheet Styling */
+    .sheet-preview-container {
+      margin-top: 30px;
+      display: none;
+    }
+
+    .handwritten-sheet {
+      background-color: #ffffff;
+      color: #1a1a1a;
+      padding: 30px;
+      border-radius: 8px;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 1.2rem;
+      line-height: 1.6;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      position: relative;
+      background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+      background-size: 16px 16px; /* Grid background look */
+    }
+
+    .handwritten-sheet h2 {
+      font-family: 'Caveat', cursive;
+      font-size: 2.5rem;
+      color: #0284c7;
+      background-color: #e0f2fe;
+      display: inline-block;
+      padding: 2px 12px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+    }
+
+    .handwritten-sheet .formula-box {
+      background-color: #f3e8ff;
+      border: 2px dashed #9333ea;
+      padding: 15px;
+      border-radius: 12px;
+      margin: 15px 0;
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #6b21a8;
+    }
+
+    .download-btn {
+      margin-top: 15px;
+      background-color: #22c55e;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">NoteNest <span>AI</span></div>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h1>Turn notes into <span>smart study sheets.</span></h1>
+      <p class="subtitle">Upload text/notes and generate handwritten-style PDF revision notes instantly.</p>
+
+      <!-- Input Text Area -->
+      <textarea id="inputText" style="width:100%; height:100px; background:#111317; color:#fff; border:1px solid var(--border-color); border-radius:8px; padding:10px; margin-bottom:15px;" placeholder="Paste your raw notes or text topic here..."></textarea>
+
+      <div class="options-grid">
+        <div class="option-card selected" onclick="selectOption(this, 'short_notes')">
+          <span>📝</span>
+          <div>
+            <strong>Short Notes</strong>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Concepts + key points</div>
+          </div>
+        </div>
+        <div class="option-card" onclick="selectOption(this, 'formula_sheet')">
+          <span>Σ</span>
+          <div>
+            <strong>Formula Sheet</strong>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Important formulas only</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="generateNotes()">Generate Notes with AI ✨</button>
+    </div>
+
+    <!-- Output Preview Area -->
+    <div class="sheet-preview-container" id="previewContainer">
+      <div id="pdfContent" class="handwritten-sheet">
+        <h2 id="sheetTitle">Electric Current</h2>
+        <p>• Electric current is the rate of charge flow past a given point in an electric circuit.</p>
+        
+        <div class="formula-box">
+          I = dq / dt
+        </div>
+
+        <p>• Denoted by the letter "I"</p>
+        <p>• Unit of electric current = Coulombs / Second = <strong>Amperes</strong></p>
+      </div>
+
+      <button class="btn-primary download-btn" onclick="downloadPDF()">Download PDF 📥</button>
+    </div>
+  </div>
+
+  <script>
+    let selectedType = 'short_notes';
+
+    function selectOption(element, type) {
+      document.querySelectorAll('.option-card').forEach(el => el.classList.remove('selected'));
+      element.classList.add('selected');
+      selectedType = type;
+    }
+
+    async function generateNotes() {
+      const text = document.getElementById('inputText').value;
+      if (!text.trim()) {
+        alert("Pehle kuchh text ya notes enter karo!");
+        return;
+      }
+
+      // Preview section show karna
+      document.getElementById('previewContainer').style.display = 'block';
+
+      /* 
+         AI Integration Logic (e.g. Google Gemini API):
+         Yahan par aap fetch request bhej kar backend/API se content generate kara sakte ho.
+      */
+      
+      // Dynamic rendering example
+      document.getElementById('sheetTitle').innerText = selectedType === 'formula_sheet' ? "Formula Sheet" : "Summary Notes";
+    }
+
+    function downloadPDF() {
+      const element = document.getElementById('pdfContent');
+      const opt = {
+        margin:       0.5,
+        filename:     'study_notes.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      // HTML content ko directly PDF me save karta hai
+      html2pdf().set(opt).from(element).save();
+    }
+  </script>
+</body>
+</html>
