@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -75,7 +76,6 @@
       border-radius: 24px; padding: 32px 20px; text-align: center;
     }
 
-    /* STEP 1: UPLOAD STYLING */
     .upload-icon-wrapper {
       width: 64px; height: 64px; background-color: var(--icon-bg);
       border-radius: 16px; display: flex; align-items: center;
@@ -93,7 +93,6 @@
       cursor: pointer; display: inline-block;
     }
 
-    /* STEP 2: OPTIONS STYLING */
     .step-2-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; text-align: left; }
 
     .options-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
@@ -120,7 +119,6 @@
       font-size: 1rem; padding: 16px; border-radius: 14px; border: none; cursor: pointer;
     }
 
-    /* HANDWRITTEN RESULT */
     .sheet-preview { margin-top: 30px; display: none; }
     .handwritten-sheet {
       background-color: #ffffff; color: #1a1a1a; padding: 28px 20px; border-radius: 12px;
@@ -148,7 +146,6 @@
 
   <div class="main-container">
     
-    <!-- STEP 1: UPLOAD SCREEN -->
     <div id="step1">
       <h1 class="hero-title">Turn any PDF into<br><span>smart study<br>notes.</span></h1>
       <p class="hero-subtitle">Upload your notes, choose what you need, and let AI create a clean revision sheet.</p>
@@ -157,14 +154,13 @@
         <div class="upload-icon-wrapper">
           <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" /></svg>
         </div>
-        <div class="upload-title">Upload PDF or Image</div>
+        <div class="upload-title">Upload PDF or File</div>
         <div class="upload-sub" id="fileStatus">Drag & drop or choose a file</div>
         <button class="btn-choose" onclick="document.getElementById('fileInput').click()">Choose File</button>
         <input type="file" id="fileInput" accept=".pdf,.txt" style="display: none;" onchange="handleFileSelect(event)">
       </div>
     </div>
 
-    <!-- STEP 2: OPTIONS SCREEN -->
     <div id="step2" style="display: none;">
       <div class="card">
         <div class="step-2-title">What should AI create?</div>
@@ -203,11 +199,10 @@
           </div>
         </div>
 
-        <button class="btn-generate" id="genBtn" onclick="generateNotes()">Generate with AI →</button>
+        <button class="btn-generate" id="genBtn" onclick="generateNotes()">Generate with Gemini AI →</button>
       </div>
     </div>
 
-    <!-- RESULT PREVIEW & PDF DOWNLOAD -->
     <div class="sheet-preview" id="previewContainer">
       <div id="pdfContent" class="handwritten-sheet"></div>
       <button class="btn-generate" style="margin-top: 15px; background-color: #22c55e; color: #fff;" onclick="downloadPDF()">Download PDF 📥</button>
@@ -215,10 +210,13 @@
 
   </div>
 
-  <footer>NoteNest AI • Built for faster revision</footer>
+  <footer>NoteNest AI • Powered by Google Gemini</footer>
 
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+    // Gemini API Key
+    const GEMINI_API_KEY = "AQ.Ab8RN6L5inQ8hOYD7q9lR8VzxWwzpScCZhOYV_gCpvJaQbsEeg";
 
     let selectedType = 'short_notes';
     let pdfTextData = "";
@@ -227,22 +225,26 @@
       const file = e.target.files[0];
       if (!file) return;
 
-      document.getElementById('fileStatus').innerText = "Loaded: " + file.name;
+      document.getElementById('fileStatus').innerText = "Reading: " + file.name;
 
       if (file.type === "application/pdf") {
         const reader = new FileReader();
         reader.onload = async function () {
-          const typedarray = new Uint8Array(this.result);
-          const pdf = await pdfjsLib.getDocument(typedarray).promise;
-          let fullText = "";
+          try {
+            const typedarray = new Uint8Array(this.result);
+            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+            let fullText = "";
 
-          for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            fullText += textContent.items.map(item => item.str).join(" ") + "\n";
+            for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+              const page = await pdf.getPage(i);
+              const textContent = await page.getTextContent();
+              fullText += textContent.items.map(item => item.str).join(" ") + "\n";
+            }
+            pdfTextData = fullText.trim();
+            showStep2();
+          } catch(err) {
+            alert("Error reading PDF file!");
           }
-          pdfTextData = fullText;
-          showStep2();
         };
         reader.readAsArrayBuffer(file);
       } else {
@@ -268,55 +270,66 @@
 
     async function generateNotes() {
       const btn = document.getElementById('genBtn');
-      btn.innerText = "Generating Notes... ⏳";
+      btn.innerText = "Analyzing PDF with Gemini AI... ⏳";
       btn.disabled = true;
 
-      const API_KEY = "AQ.Ab8RN6L5inQ8hOYD7q9lR8VzxWwzpScCZhOYV_gCpvJaQbsEeg";
+      const instructions = {
+        'short_notes': "Create structured handwritten revision notes. Use <h2> for main Title, <p> for points, and <div class='formula-box'> for key highlights.",
+        'formula_sheet': "Extract ONLY key formulas and definitions. Use <h2> for Title and put every formula inside <div class='formula-box'>.",
+        'cheat_sheet': "Create an ultra-compact quick revision sheet. Bold important terms and keep explanations short.",
+        'one_page': "Provide a comprehensive 1-page summary covering all main points in bullet points."
+      };
 
-      let prompt = "";
-      if (selectedType === 'formula_sheet') {
-        prompt = `Extract key formulas and short explanations in clean HTML (use <h2> for Title, <div class="formula-box"> for key formulas, and <p> for points): ${pdfTextData}`;
-      } else if (selectedType === 'cheat_sheet') {
-        prompt = `Create an ultra-compact quick revision cheat sheet in HTML using <h2> for Title, bold tags for key terms, and <p> for short bullets: ${pdfTextData}`;
-      } else if (selectedType === 'one_page') {
-        prompt = `Summarize into a concise one-page revision guide in HTML using <h2> for Title, bullet points, and <div class="formula-box"> for highlights: ${pdfTextData}`;
-      } else {
-        prompt = `Create handwritten-style study short notes in HTML using <h2> for main title, <p> with bullet points for key concepts, and <div class="formula-box"> for equations: ${pdfTextData}`;
-      }
+      const promptText = `You are NoteNest AI. Output ONLY raw HTML code (do NOT wrap in \`\`\`html or markdown, just pure HTML tags). 
+Format requirements:
+- Use <h2> for Title
+- Use <p> and <b> for bullet points and key terms
+- Use <div class='formula-box'> for formulas or major rules
+
+User Instruction: ${instructions[selectedType]}
+
+PDF Content:
+${pdfTextData.substring(0, 4000)}`;
 
       try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: promptText }]
+            }]
+          })
         });
 
         const data = await response.json();
-        let aiOutput = data.candidates[0].content.parts[0].text;
-        aiOutput = aiOutput.replace(/```html|```/g, '');
+        
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+          let aiOutput = data.candidates[0].content.parts[0].text;
+          aiOutput = aiOutput.replace(/```html|```/g, '').trim();
 
-        document.getElementById('pdfContent').innerHTML = aiOutput;
-        document.getElementById('previewContainer').style.display = 'block';
-
+          document.getElementById('pdfContent').innerHTML = aiOutput;
+          document.getElementById('previewContainer').style.display = 'block';
+        } else {
+          alert("Gemini AI API me issue aaya, kripya dubara try karein.");
+        }
       } catch (err) {
-        alert("Generation me error aaya. Check console.");
-        console.error(err);
+        alert("API Connection Error! Check your internet or API key.");
       } finally {
-        btn.innerText = "Generate with AI →";
+        btn.innerText = "Generate with Gemini AI →";
         btn.disabled = false;
       }
     }
 
     function downloadPDF() {
       const element = document.getElementById('pdfContent');
-      const opt = {
+      html2pdf().set({
         margin: 0.5,
         filename: 'study_notes.pdf',
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      };
-      html2pdf().set(opt).from(element).save();
+      }).from(element).save();
     }
   </script>
 </body>
